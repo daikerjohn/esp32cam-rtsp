@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <ArduinoOTA.h>
+//#include <ArduinoOTA.h>
 #include <soc/rtc_cntl_reg.h>
 #include <IotWebConf.h>
 #include <IotWebConfTParameter.h>
@@ -15,6 +15,9 @@
 #include <html_data_gzip.h>
 #include <settings.h>
 
+char ssid[] = "";
+char pass[] = "";
+
 char camera_config_val[sizeof(camera_config_entry)];
 char frame_duration_val[6];
 char frame_size_val[sizeof(frame_size_entry_t)];
@@ -23,7 +26,7 @@ char jpeg_quality_val[4];
 
 auto config_group_stream_settings = iotwebconf::ParameterGroup("settings", "Streaming settings");
 auto config_camera_config = iotwebconf::SelectParameter("Camera config", "config", camera_config_val, sizeof(camera_config_val), (const char *)camera_configs, (const char *)camera_configs, sizeof(camera_configs) / sizeof(camera_configs[0]), sizeof(camera_configs[0]), DEFAULT_CAMERA_CONFIG);
-auto config_frame_rate = iotwebconf::NumberParameter("Frame duration (ms)", "fd", frame_duration_val, sizeof(frame_duration_val), DEFAULT_FRAME_DURATION, nullptr, "min=\"10\"");
+auto config_frame_rate = iotwebconf::NumberParameter("Frame duration (ms)", "fd", frame_duration_val, sizeof(frame_duration_val), DEFAULT_FRAME_DURATION, nullptr, "min=\"50\"");
 auto config_frame_size = iotwebconf::SelectParameter("Frame size", "fs", frame_size_val, sizeof(frame_size_val), (const char *)frame_sizes, (const char *)frame_sizes, sizeof(frame_sizes) / sizeof(frame_sizes[0]), sizeof(frame_sizes[0]), DEFAULT_FRAME_SIZE);
 auto config_frame_buffers = iotwebconf::NumberParameter("Frame buffers", "fb", frame_buffers_val, sizeof(frame_buffers_val), DEFAULT_FRAME_BUFFERS, nullptr, "min=\"1\" max=\"16\"");
 auto config_jpg_quality = iotwebconf::NumberParameter("JPEG quality", "q", jpeg_quality_val, sizeof(jpeg_quality_val), DEFAULT_JPEG_QUALITY, nullptr, "min=\"1\" max=\"100\"");
@@ -57,8 +60,8 @@ void handle_root()
 {
   log_v("Handle root");
   // Let IotWebConf test and handle captive portal requests.
-  if (iotWebConf.handleCaptivePortal())
-    return;
+  //if (iotWebConf.handleCaptivePortal())
+  //  return;
 
   // Format hostname
   auto hostname = "esp32-" + WiFi.macAddress() + ".local";
@@ -207,7 +210,7 @@ void on_connected()
 {
   log_v("on_connected");
    // Start (OTA) Over The Air programming  when connected
-  ArduinoOTA.begin();
+  //ArduinoOTA.begin();
   // Start the RTSP Server
   start_rtsp_server();
 }
@@ -240,6 +243,28 @@ void setup()
   iotWebConf.setWifiConnectionCallback(on_connected);
   iotWebConf.init();
 
+  iotWebConf.skipApStartup();
+  bool doSave = false;
+  if(iotWebConf.getApPasswordParameter()->valueBuffer == nullptr) {
+    strncpy(iotWebConf.getApPasswordParameter()->valueBuffer, "garbage", iotWebConf.getApPasswordParameter()->getLength());
+    doSave = true;
+  }
+  if(iotWebConf.getWifiSsidParameter()->valueBuffer == nullptr) {
+    strncpy(iotWebConf.getWifiSsidParameter()->valueBuffer, ssid, iotWebConf.getWifiSsidParameter()->getLength());
+    doSave = true;
+  }
+  if(iotWebConf.getWifiPasswordParameter()->valueBuffer == nullptr) {
+    strncpy(iotWebConf.getWifiPasswordParameter()->valueBuffer, pass, iotWebConf.getWifiPasswordParameter()->getLength());
+    doSave = true;
+  }
+  if(doSave) {
+    iotWebConf.saveConfig();
+    Serial.println(iotWebConf.getApPasswordParameter()->valueBuffer);
+    Serial.println(iotWebConf.getWifiSsidParameter()->valueBuffer);
+    Serial.println(iotWebConf.getWifiPasswordParameter()->valueBuffer);
+    iotWebConf.resetWifiAuthInfo();
+  }
+
   // Set up required URL handlers on the web server
   web_server.on("/", HTTP_GET, handle_root);
   web_server.on("/config", []
@@ -255,6 +280,7 @@ void setup()
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
 
+/*
   ArduinoOTA
       .onStart([]()
                { log_w("Starting OTA update: %s", ArduinoOTA.getCommand() == U_FLASH ? "sketch" : "filesystem"); })
@@ -274,12 +300,13 @@ void setup()
       default: log_e("OTA error: %u", error);
       } });
   ArduinoOTA.setPassword(OTA_PASSWORD);
+  */
 }
 
 void loop()
 {
   iotWebConf.doLoop();
-  ArduinoOTA.handle();
+  //ArduinoOTA.handle();
 
   if (camera_server)
     camera_server->doLoop();

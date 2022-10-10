@@ -24,7 +24,10 @@ constexpr const frame_size_entry_t frame_sizes[] = {
     {"XGA (1024x768)", FRAMESIZE_XGA},
     {"HD (1280x720)", FRAMESIZE_HD},
     {"SXGA (1280x1024)", FRAMESIZE_SXGA},
-    {"UXGA (1600x1200)", FRAMESIZE_UXGA}};
+    {"UXGA (1600x1200)", FRAMESIZE_UXGA},
+    {"FHD (1920x1080)", FRAMESIZE_FHD}, // 3MP Sensors
+    {"QXGA (2048x1536)", FRAMESIZE_QXGA}, // 3MP Sensors
+    };
 
 const framesize_t lookup_frame_size(const char *pin)
 {
